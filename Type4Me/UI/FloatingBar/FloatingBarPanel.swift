@@ -77,10 +77,16 @@ final class FloatingBarPanel: NSPanel {
         updateAppearance()
     }
 
-    func updateAppearance() {
-        let themeRaw = UserDefaults.standard.string(forKey: RecordingTheme.storageKey) ?? RecordingTheme.defaultValue.rawValue
-        let theme = RecordingTheme(rawValue: themeRaw) ?? .dark
-        appearance = theme == .light ? NSAppearance(named: .aqua) : NSAppearance(named: .darkAqua)
+    func updateAppearance(theme: RecordingTheme? = nil) {
+        let resolved: RecordingTheme
+        if let theme {
+            resolved = theme
+        } else {
+            let themeRaw = UserDefaults.standard.string(forKey: RecordingTheme.storageKey)
+                ?? RecordingTheme.defaultValue.rawValue
+            resolved = RecordingTheme(rawValue: themeRaw) ?? .dark
+        }
+        appearance = resolved == .light ? NSAppearance(named: .aqua) : NSAppearance(named: .darkAqua)
     }
 
     override var canBecomeKey: Bool { false }
@@ -192,7 +198,7 @@ final class FloatingBarController {
     func show() {
         guard !isSuppressedForManualInput else { return }
         panelGeneration &+= 1
-        panel.updateAppearance()
+        panel.updateAppearance(theme: currentDisplayOverride()?.theme)
 
         if anchorDisplayID == nil || state.barPhase == .preparing {
             anchorDisplayID = FloatingBarPanel.screenUnderMouse()
@@ -244,7 +250,16 @@ final class FloatingBarController {
             return currentLayout
         }
 
-        return .fallback(for: RecordingIndicatorStyle.current())
+        let profile = currentDisplayOverride()
+        return .fallback(
+            for: profile?.indicatorStyle ?? RecordingIndicatorStyle.current(),
+            showsLiveTranscript: profile?.showsLiveTranscript ?? LiveTranscriptDisplayPreference.isEnabled()
+        )
+    }
+
+    /// The current mode's whole-block override, when it has one.
+    private func currentDisplayOverride() -> FloatingBarPresentation? {
+        state.recordingDisplayOverride(for: state.currentMode.id)
     }
 
     private func resizePanel(

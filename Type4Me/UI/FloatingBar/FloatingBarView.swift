@@ -86,10 +86,15 @@ protocol FloatingBarState: AnyObject, Observable {
     var effectiveProcessingLabel: String { get }
     var activityKind: RecordingActivityKind { get }
     var latestReviseUndoTicketID: UUID? { get }
+    /// The mode's whole-block recording-display override. Nil when the mode
+    /// follows the global Appearance settings.
+    func recordingDisplayOverride(for modeID: UUID) -> FloatingBarPresentation?
     func performRecordingControlAction(_ action: RecordingControlAction)
     func performReviseUndo()
 }
 
+/// Everything the floating bar reads to draw itself. Persisted per mode as a
+/// whole-block override, so it round-trips through JSON.
 struct FloatingBarPresentation: Equatable {
     var theme: RecordingTheme = .dark
     var indicatorStyle: RecordingIndicatorStyle = .regular
@@ -105,6 +110,60 @@ struct FloatingBarPresentation: Equatable {
 
     var showsRecordingIndicator: Bool {
         true
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case theme, indicatorStyle, visualStyle
+        case showsLiveTranscript, enablesHoverTranscriptPreview, showsTooltips
+        case showsCancelButton, showsFinishButton
+        case showsModeName, showsProviderName, showsModelName
+    }
+}
+
+extension FloatingBarPresentation: Codable {
+    /// A stored profile outlives the app version that wrote it, so an unknown
+    /// value or a missing key falls back to the default instead of failing the
+    /// whole decode and losing every other profile.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init()
+
+        func decodeEnum<T: RawRepresentable>(_ key: CodingKeys, default fallback: T) -> T
+        where T.RawValue == String {
+            let raw = try? container.decodeIfPresent(String.self, forKey: key)
+            return raw.flatMap(T.init(rawValue:)) ?? fallback
+        }
+
+        theme = decodeEnum(.theme, default: .dark)
+        indicatorStyle = decodeEnum(.indicatorStyle, default: .regular)
+        visualStyle = decodeEnum(.visualStyle, default: .siri)
+        showsLiveTranscript = (try? container.decodeIfPresent(Bool.self, forKey: .showsLiveTranscript)) ?? true
+        enablesHoverTranscriptPreview =
+            (try? container.decodeIfPresent(Bool.self, forKey: .enablesHoverTranscriptPreview)) ?? true
+        showsTooltips = (try? container.decodeIfPresent(Bool.self, forKey: .showsTooltips)) ?? true
+        showsCancelButton = (try? container.decodeIfPresent(Bool.self, forKey: .showsCancelButton)) ?? true
+        showsFinishButton = (try? container.decodeIfPresent(Bool.self, forKey: .showsFinishButton)) ?? true
+        showsModeName = (try? container.decodeIfPresent(Bool.self, forKey: .showsModeName))
+            ?? RecordingMetadataDisplayPreference.showModeNameDefault
+        showsProviderName = (try? container.decodeIfPresent(Bool.self, forKey: .showsProviderName))
+            ?? RecordingMetadataDisplayPreference.showProviderNameDefault
+        showsModelName = (try? container.decodeIfPresent(Bool.self, forKey: .showsModelName))
+            ?? RecordingMetadataDisplayPreference.showModelNameDefault
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(theme.rawValue, forKey: .theme)
+        try container.encode(indicatorStyle.rawValue, forKey: .indicatorStyle)
+        try container.encode(visualStyle.rawValue, forKey: .visualStyle)
+        try container.encode(showsLiveTranscript, forKey: .showsLiveTranscript)
+        try container.encode(enablesHoverTranscriptPreview, forKey: .enablesHoverTranscriptPreview)
+        try container.encode(showsTooltips, forKey: .showsTooltips)
+        try container.encode(showsCancelButton, forKey: .showsCancelButton)
+        try container.encode(showsFinishButton, forKey: .showsFinishButton)
+        try container.encode(showsModeName, forKey: .showsModeName)
+        try container.encode(showsProviderName, forKey: .showsProviderName)
+        try container.encode(showsModelName, forKey: .showsModelName)
     }
 }
 
@@ -165,46 +224,64 @@ struct FloatingBarView<S: FloatingBarState>: View {
 
     // MARK: - Presentation Resolution
 
+    private var globalPresentation: FloatingBarPresentation {
+        FloatingBarPresentation(
+            theme: RecordingTheme(rawValue: theme.rawValue) ?? .dark,
+            indicatorStyle: RecordingIndicatorStyle(rawValue: indicatorStyle) ?? .regular,
+            visualStyle: RecordingVisualStyle(rawValue: visualStyle) ?? .siri,
+            showsLiveTranscript: showLiveTranscript,
+            enablesHoverTranscriptPreview: hoverTranscriptPreview,
+            showsTooltips: showTooltips,
+            showsCancelButton: showCancelButton,
+            showsFinishButton: showFinishButton,
+            showsModeName: showModeName,
+            showsProviderName: showProviderName,
+            showsModelName: showModelName
+        )
+    }
+
+    /// Precedence: an explicit preview override, then the current mode's own
+    /// profile, then the global Appearance settings.
+    private var resolvedPresentation: FloatingBarPresentation {
+        presentationOverride
+            ?? state.recordingDisplayOverride(for: state.currentMode.id)
+            ?? globalPresentation
+    }
+
     private var effectiveTheme: RecordingTheme {
-        presentationOverride?.theme
-            ?? RecordingTheme(rawValue: theme.rawValue)
-            ?? .dark
+        resolvedPresentation.theme
     }
 
     private var effectiveIndicatorStyle: RecordingIndicatorStyle {
-        presentationOverride?.indicatorStyle
-            ?? RecordingIndicatorStyle(rawValue: indicatorStyle)
-            ?? .regular
+        resolvedPresentation.indicatorStyle
     }
 
     private var effectiveRecordingVisualStyle: RecordingVisualStyle {
-        presentationOverride?.visualStyle
-            ?? RecordingVisualStyle(rawValue: visualStyle)
-            ?? .siri
+        resolvedPresentation.visualStyle
     }
 
     private var effectiveShowsLiveTranscript: Bool {
-        presentationOverride?.showsLiveTranscript ?? showLiveTranscript
+        resolvedPresentation.showsLiveTranscript
     }
 
     private var effectiveHoverTranscriptPreview: Bool {
         guard effectiveIndicatorStyle == .regular else { return false }
-        return presentationOverride?.enablesHoverTranscriptPreview ?? hoverTranscriptPreview
+        return resolvedPresentation.enablesHoverTranscriptPreview
     }
 
     private var effectiveShowsTooltips: Bool {
-        presentationOverride?.showsTooltips ?? showTooltips
+        resolvedPresentation.showsTooltips
     }
 
     private var effectiveShowsCancelButton: Bool {
-        presentationOverride?.showsCancelButton ?? showCancelButton
+        resolvedPresentation.showsCancelButton
     }
 
     /// Compact only. The regular bar's finish control is the `LiquidGlassOrb`,
     /// which is also that style's only audio-level feedback while recording, so
     /// it is never hidden. The compact capsule draws its waveform separately.
     private var effectiveShowsCompactFinishButton: Bool {
-        presentationOverride?.showsFinishButton ?? showFinishButton
+        resolvedPresentation.showsFinishButton
     }
 
     private var currentRecordingChromeWidth: CGFloat {
@@ -226,15 +303,15 @@ struct FloatingBarView<S: FloatingBarState>: View {
     }
 
     private var effectiveShowsModeName: Bool {
-        presentationOverride?.showsModeName ?? showModeName
+        resolvedPresentation.showsModeName
     }
 
     private var effectiveShowsProviderName: Bool {
-        presentationOverride?.showsProviderName ?? showProviderName
+        resolvedPresentation.showsProviderName
     }
 
     private var effectiveShowsModelName: Bool {
-        presentationOverride?.showsModelName ?? showModelName
+        resolvedPresentation.showsModelName
     }
 
     private var usesCompactPresentation: Bool {
@@ -293,7 +370,8 @@ struct FloatingBarView<S: FloatingBarState>: View {
         if let hintedAction, state.barPhase == .recording || state.barPhase == .preparing {
             return .action(hintedAction)
         }
-        if showsModeHint,
+        // Settings previews keep metadata visible so mode and label options can be inspected.
+        if showsModeHint || presentationOverride != nil,
            recordingMetadataText != nil,
            (state.barPhase == .preparing || state.barPhase == .recording) {
             return .mode
@@ -1473,25 +1551,34 @@ private struct FrostedGlassBubbleBackground: View {
     var theme: RecordingTheme = .dark
 
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-
     private var shape: RoundedRectangle {
         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
     }
 
     var body: some View {
-        RecordingGlassSurface(
-            cornerRadius: cornerRadius,
-            theme: theme,
-            tintOpacity: theme == .light ? 0.75 : 0.40
-        )
-        .overlay {
-            if !usesNativeLiquidGlass(reduceTransparency: reduceTransparency) {
-                shape.strokeBorder(
-                    theme == .light ? TF.floatingBorderLight : TF.floatingBorder,
-                    lineWidth: 0.5
+        // Native glass can resample the light settings canvas after focus changes.
+        // Keep tooltip contrast in a fixed theme tint above the frosted material.
+        ZStack {
+            if !reduceTransparency {
+                VisualEffectBlur(
+                    cornerRadius: cornerRadius,
+                    appearanceName: theme == .light ? .aqua : .darkAqua
                 )
+                .allowsHitTesting(false)
             }
+
+            shape.fill(
+                theme == .light
+                    ? TF.floatingBackgroundLight.opacity(reduceTransparency ? 1 : 0.90)
+                    : TF.floatingBackground.opacity(reduceTransparency ? 1 : 0.90)
+            )
+
+            shape.strokeBorder(
+                theme == .light ? TF.floatingBorderLight : TF.floatingBorder,
+                lineWidth: 0.5
+            )
         }
+        .clipShape(shape)
     }
 }
 

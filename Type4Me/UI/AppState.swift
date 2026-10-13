@@ -1422,6 +1422,10 @@ final class AppState {
     @ObservationIgnored let audioLevel = AudioLevelMeter()
     var recordingStartDate: Date?
     var availableModes: [ProcessingMode]
+
+    /// Mode id -> that mode's whole-block recording-display override. Modes
+    /// absent here follow the global Appearance settings.
+    var recordingDisplayProfiles: [UUID: FloatingBarPresentation] = [:]
     var feedbackMessage: String = L("已完成", "Done")
     var feedbackKind: FeedbackKind = .standard
     var processingLabelOverride: String?
@@ -1473,6 +1477,7 @@ final class AppState {
 
     init(
         modeStorage: ModeStorage = ModeStorage(),
+        recordingDisplayStore: RecordingDisplayProfileStore = RecordingDisplayProfileStore(),
         userDefaults: UserDefaults = .standard
     ) {
         let isFreshInstall = !FileManager.default.fileExists(atPath: modeStorage.fileURL.path)
@@ -1484,6 +1489,19 @@ final class AppState {
             userDefaults: userDefaults,
             isFreshInstall: isFreshInstall
         )
+
+        // A deleted mode must not leave its profile behind forever.
+        let stored = recordingDisplayStore.load()
+        let modeIDs = Set(modes.map(\.id))
+        let pruned = stored.filter { modeIDs.contains($0.key) }
+        recordingDisplayProfiles = pruned
+        if pruned.count != stored.count {
+            try? recordingDisplayStore.save(pruned)
+        }
+    }
+
+    func recordingDisplayOverride(for modeID: UUID) -> FloatingBarPresentation? {
+        recordingDisplayProfiles[modeID]
     }
 
     // MARK: Actions
@@ -1931,6 +1949,7 @@ private struct RecordingDisplayMetadata {
 
 extension Notification.Name {
     static let modesDidChange = Notification.Name("Type4MeModesDidChange")
+    static let recordingDisplayProfilesDidChange = Notification.Name("Type4MeRecordingDisplayProfilesDidChange")
     static let asrProviderDidChange = Notification.Name("Type4MeASRProviderDidChange")
     static let hotkeyRecordingDidStart = Notification.Name("Type4MeHotkeyRecordingDidStart")
     static let hotkeyRecordingDidEnd = Notification.Name("Type4MeHotkeyRecordingDidEnd")

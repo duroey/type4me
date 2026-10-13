@@ -6,6 +6,8 @@ import SwiftUI
 
 struct AppearanceSettingsTab: View, SettingsCardHelpers {
 
+    @Environment(AppState.self) private var appState
+
     @AppStorage(SettingsTheme.storageKey)
     private var settingsTheme = SettingsTheme.defaultValue.rawValue
 
@@ -54,15 +56,36 @@ struct AppearanceSettingsTab: View, SettingsCardHelpers {
     @AppStorage("tf_language")
     private var language = AppLanguage.systemDefault
 
+    /// Mode id -> that mode's own copy of the whole recording-display block.
+    /// A mode absent here follows the global settings edited above.
+    @State private var profiles: [UUID: FloatingBarPresentation] = [:]
+    @State private var selectedProfileModeID: UUID?
+
+    private static let globalProfileKey = "global"
+
+    private var followsGlobal: Bool {
+        guard let selectedProfileModeID else { return false }
+        return profiles[selectedProfileModeID] == nil
+    }
+
+    private var previewMode: ProcessingMode? {
+        appState.availableModes.first { $0.id == selectedProfileModeID }
+    }
+
     // Compact square-proportioned icon segments following Apple segmented button standards.
     private let themeSegmentWidth: CGFloat = 40
     private var themeControlWidth: CGFloat { themeSegmentWidth * 3 + 8 }
 
-    private var isCompact: Bool {
-        indicatorStyle == RecordingIndicatorStyle.compact.rawValue
+    /// The block currently being edited: the selected mode's profile, or the
+    /// global settings. The preview stage renders exactly this.
+    private var presentation: FloatingBarPresentation {
+        guard let selectedProfileModeID, let profile = profiles[selectedProfileModeID] else {
+            return globalPresentation
+        }
+        return profile
     }
 
-    private var presentation: FloatingBarPresentation {
+    private var globalPresentation: FloatingBarPresentation {
         FloatingBarPresentation(
             theme: RecordingTheme(rawValue: theme) ?? .dark,
             indicatorStyle: RecordingIndicatorStyle(rawValue: indicatorStyle) ?? .regular,
@@ -76,6 +99,60 @@ struct AppearanceSettingsTab: View, SettingsCardHelpers {
             showsProviderName: showProviderName,
             showsModelName: showModelName
         )
+    }
+
+    /// The compact indicator has no orb and no hover preview, so the card hides
+    /// the rows that cannot apply to whichever block is being edited.
+    private var isCompact: Bool {
+        presentation.indicatorStyle == .compact
+    }
+
+    private func value<T>(_ keyPath: KeyPath<FloatingBarPresentation, T>) -> T {
+        presentation[keyPath: keyPath]
+    }
+
+    /// Sends one edited field to the selected mode's profile, or to the global
+    /// setting when no mode is selected.
+    private func write<T>(
+        _ keyPath: WritableKeyPath<FloatingBarPresentation, T>,
+        _ newValue: T,
+        globally: () -> Void
+    ) {
+        guard let modeID = selectedProfileModeID else {
+            globally()
+            return
+        }
+        guard !followsGlobal else { return }
+        var profile = profiles[modeID] ?? globalPresentation
+        profile[keyPath: keyPath] = newValue
+        persist(profile, for: modeID)
+    }
+
+    private func persist(_ profile: FloatingBarPresentation, for modeID: UUID) {
+        var updated = profiles
+        updated[modeID] = profile
+        guard RecordingDisplayProfileStore.persist(updated, appState: appState) else { return }
+        profiles = updated
+    }
+
+    private func setFollowsGlobal(_ follows: Bool) {
+        guard let modeID = selectedProfileModeID else { return }
+        if follows {
+            var updated = profiles
+            updated.removeValue(forKey: modeID)
+            guard RecordingDisplayProfileStore.persist(updated, appState: appState) else { return }
+            profiles = updated
+        } else {
+            persist(globalPresentation, for: modeID)
+        }
+    }
+
+    private func syncProfiles() {
+        profiles = appState.recordingDisplayProfiles
+        if let selectedProfileModeID,
+           !appState.availableModes.contains(where: { $0.id == selectedProfileModeID }) {
+            self.selectedProfileModeID = nil
+        }
     }
 
     private var formattingOptions: TextOutputFormattingOptions {
@@ -112,7 +189,8 @@ struct AppearanceSettingsTab: View, SettingsCardHelpers {
 
             AppearancePreviewStage(
                 presentation: presentation,
-                formattingOptions: formattingOptions
+                formattingOptions: formattingOptions,
+                mode: previewMode
             )
 
             Spacer().frame(height: 16)
@@ -122,42 +200,54 @@ struct AppearanceSettingsTab: View, SettingsCardHelpers {
             // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
             settingsGroupCard(L("录音显示", "Recording Display"), icon: "macwindow") {
-                themeRow
-                SettingsDivider()
-                indicatorStyleRow
+                profileRow
                 SettingsDivider()
 
-                if !isCompact {
-                    visualStyleRow
+                if selectedProfileModeID != nil {
+                    followGlobalRow
                     SettingsDivider()
                 }
 
-                liveTranscriptRow
-
-                if !isCompact {
+                VStack(alignment: .leading, spacing: 0) {
+                    themeRow
                     SettingsDivider()
-                    hoverPreviewRow
-                }
-
-                if isCompact {
+                    indicatorStyleRow
                     SettingsDivider()
-                    showFinishButtonRow
+
+                    if !isCompact {
+                        visualStyleRow
+                        SettingsDivider()
+                    }
+
+                    liveTranscriptRow
+
+                    if !isCompact {
+                        SettingsDivider()
+                        hoverPreviewRow
+                    }
+
+                    if isCompact {
+                        SettingsDivider()
+                        showFinishButtonRow
+                    }
+
+                    SettingsDivider()
+                    showCancelButtonRow
+                    SettingsDivider()
+
+                    showTooltipsRow
+                    SettingsDivider()
+                    modeNameRow
+                    SettingsDivider()
+                    providerNameRow
+                    SettingsDivider()
+                    modelNameRow
                 }
-
-                SettingsDivider()
-                showCancelButtonRow
-                SettingsDivider()
-
-                showTooltipsRow
-                SettingsDivider()
-                modeNameRow
-                SettingsDivider()
-                providerNameRow
-                SettingsDivider()
-                modelNameRow
+                .disabled(followsGlobal)
+                .opacity(followsGlobal ? 0.45 : 1)
             }
             .animation(TF.springGentle, value: isCompact)
-            .animation(TF.springGentle, value: showTooltips)
+            .animation(TF.springGentle, value: value(\.showsTooltips))
 
             Spacer().frame(height: 16)
 
@@ -173,9 +263,56 @@ struct AppearanceSettingsTab: View, SettingsCardHelpers {
                 cornerQuotesRow
             }
         }
+        .onAppear { syncProfiles() }
+        .onReceive(NotificationCenter.default.publisher(for: .recordingDisplayProfilesDidChange)) { _ in
+            syncProfiles()
+        }
     }
 
-    // MARK: - Row Builders
+    // MARK: - Profile Rows
+
+    /// Selecting a mode only changes the editing target; inheritance is explicit.
+    private var profileRow: some View {
+        settingsOptionRow(
+            L("配置对象", "Applies To"),
+            subtitle: L(
+                "全局配置是所有跟随全局的模式共用的录音显示配置。",
+                "Global Configuration provides the recording-display settings for all modes that follow it."
+            ),
+            controlWidth: SettingsControlWidth.standard
+        ) {
+            settingsDropdown(
+                selection: Binding(
+                    get: { selectedProfileModeID?.uuidString ?? Self.globalProfileKey },
+                    set: { rawValue in
+                        guard rawValue != Self.globalProfileKey else {
+                            selectedProfileModeID = nil
+                            return
+                        }
+                        guard let modeID = UUID(uuidString: rawValue) else { return }
+                        selectedProfileModeID = modeID
+                    }
+                ),
+                options: [(Self.globalProfileKey, L("全局配置", "Global Configuration"))]
+                    + appState.availableModes.map { ($0.id.uuidString, $0.localizedDisplayName) }
+            )
+        }
+    }
+
+    private var followGlobalRow: some View {
+        settingsToggleRow(
+            L("跟随全局", "Follow Global"),
+            subtitle: L(
+                "开启后使用「全局配置」，并随其变化；关闭后可独立设置下方选项。",
+                "Use Global Configuration and follow its changes. Turn off to customize the options below."
+            ),
+            isOn: Binding(
+                get: { followsGlobal },
+                set: { setFollowsGlobal($0) }
+            )
+        )
+    }
+
 
     private var themeRow: some View {
         settingsOptionRow(
@@ -183,7 +320,13 @@ struct AppearanceSettingsTab: View, SettingsCardHelpers {
             controlWidth: SettingsControlWidth.inlineSegmented
         ) {
             settingsInlineSegmentedPicker(
-                selection: $theme,
+                selection: Binding(
+                    get: { value(\.theme).rawValue },
+                    set: { rawValue in
+                        guard let newTheme = RecordingTheme(rawValue: rawValue) else { return }
+                        write(\.theme, newTheme) { theme = rawValue }
+                    }
+                ),
                 options: RecordingTheme.allCases.map { ($0.rawValue, $0.displayName) }
             )
         }
@@ -195,7 +338,13 @@ struct AppearanceSettingsTab: View, SettingsCardHelpers {
             controlWidth: SettingsControlWidth.inlineSegmented
         ) {
             settingsInlineSegmentedPicker(
-                selection: $indicatorStyle,
+                selection: Binding(
+                    get: { value(\.indicatorStyle).rawValue },
+                    set: { rawValue in
+                        guard let newStyle = RecordingIndicatorStyle(rawValue: rawValue) else { return }
+                        write(\.indicatorStyle, newStyle) { indicatorStyle = rawValue }
+                    }
+                ),
                 options: RecordingIndicatorStyle.allCases.map { ($0.rawValue, $0.displayName) }
             )
         }
@@ -207,7 +356,13 @@ struct AppearanceSettingsTab: View, SettingsCardHelpers {
             subtitle: L("选择常规指示条的液态玻璃球与文字光效。", "Choose the liquid-glass orb and text glow for the regular indicator.")
         ) {
             settingsDropdown(
-                selection: $visualStyle,
+                selection: Binding(
+                    get: { value(\.visualStyle).rawValue },
+                    set: { rawValue in
+                        guard let newStyle = RecordingVisualStyle(rawValue: rawValue) else { return }
+                        write(\.visualStyle, newStyle) { visualStyle = rawValue }
+                    }
+                ),
                 options: RecordingVisualStyle.allCases.map { ($0.rawValue, $0.displayName) }
             )
         }
@@ -217,14 +372,20 @@ struct AppearanceSettingsTab: View, SettingsCardHelpers {
         settingsToggleRow(
             L("实时展示文本", "Live Transcript"),
             subtitle: L("开启后在录音时显示识别文本", "Show recognized text while recording"),
-            isOn: $showLiveTranscript
+            isOn: Binding(
+                get: { value(\.showsLiveTranscript) },
+                set: { newValue in write(\.showsLiveTranscript, newValue) { showLiveTranscript = newValue } }
+            )
         )
     }
 
     private var hoverPreviewRow: some View {
         settingsToggleRow(
             L("悬停文字预览", "Hover Text Preview"),
-            isOn: $hoverTranscriptPreview
+            isOn: Binding(
+                get: { value(\.enablesHoverTranscriptPreview) },
+                set: { newValue in write(\.enablesHoverTranscriptPreview, newValue) { hoverTranscriptPreview = newValue } }
+            )
         )
     }
 
@@ -235,7 +396,10 @@ struct AppearanceSettingsTab: View, SettingsCardHelpers {
                 "关闭后隐藏停止按钮，音波居中显示，仍可通过快捷键结束录制",
                 "Hide the stop button and centre the waveform; you can still finish recording with the hotkey"
             ),
-            isOn: $showFinishButton
+            isOn: Binding(
+                get: { value(\.showsFinishButton) },
+                set: { newValue in write(\.showsFinishButton, newValue) { showFinishButton = newValue } }
+            )
         )
     }
 
@@ -246,7 +410,10 @@ struct AppearanceSettingsTab: View, SettingsCardHelpers {
                 "关闭后隐藏取消按钮，仍可通过 Esc 键取消录制",
                 "Hide cancel button; you can still cancel using Esc key"
             ),
-            isOn: $showCancelButton
+            isOn: Binding(
+                get: { value(\.showsCancelButton) },
+                set: { newValue in write(\.showsCancelButton, newValue) { showCancelButton = newValue } }
+            )
         )
     }
 
@@ -257,7 +424,10 @@ struct AppearanceSettingsTab: View, SettingsCardHelpers {
                 "开启后在录音开始与悬停按钮时显示提示气泡",
                 "Show hints on recording start and button hover"
             ),
-            isOn: $showTooltips
+            isOn: Binding(
+                get: { value(\.showsTooltips) },
+                set: { newValue in write(\.showsTooltips, newValue) { showTooltips = newValue } }
+            )
         )
     }
 
@@ -265,8 +435,11 @@ struct AppearanceSettingsTab: View, SettingsCardHelpers {
         settingsToggleRow(
             L("显示模式名称", "Show Mode Name"),
             subtitle: L("在录音开始提示中显示当前模式", "Show the current mode in the recording-start tooltip"),
-            isOn: $showModeName,
-            isEnabled: showTooltips,
+            isOn: Binding(
+                get: { value(\.showsModeName) },
+                set: { newValue in write(\.showsModeName, newValue) { showModeName = newValue } }
+            ),
+            isEnabled: value(\.showsTooltips),
             isIndented: true
         )
     }
@@ -275,8 +448,11 @@ struct AppearanceSettingsTab: View, SettingsCardHelpers {
         settingsToggleRow(
             L("显示服务商", "Show Provider"),
             subtitle: L("在录音开始提示中显示语音识别服务商", "Show the speech provider in the recording-start tooltip"),
-            isOn: $showProviderName,
-            isEnabled: showTooltips,
+            isOn: Binding(
+                get: { value(\.showsProviderName) },
+                set: { newValue in write(\.showsProviderName, newValue) { showProviderName = newValue } }
+            ),
+            isEnabled: value(\.showsTooltips),
             isIndented: true
         )
     }
@@ -285,8 +461,11 @@ struct AppearanceSettingsTab: View, SettingsCardHelpers {
         settingsToggleRow(
             L("显示模型名称", "Show Model Name"),
             subtitle: L("在录音开始提示中显示语音识别模型", "Show the speech model in the recording-start tooltip"),
-            isOn: $showModelName,
-            isEnabled: showTooltips,
+            isOn: Binding(
+                get: { value(\.showsModelName) },
+                set: { newValue in write(\.showsModelName, newValue) { showModelName = newValue } }
+            ),
+            isEnabled: value(\.showsTooltips),
             isIndented: true
         )
     }

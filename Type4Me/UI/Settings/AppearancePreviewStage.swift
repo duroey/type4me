@@ -20,6 +20,7 @@ struct AppearancePreviewStage: View {
 
     let presentation: FloatingBarPresentation
     let formattingOptions: TextOutputFormattingOptions
+    let mode: ProcessingMode?
 
     @State private var demoState = DemoState()
     @State private var previewPhase: PreviewPhase = .recording
@@ -57,6 +58,12 @@ struct AppearancePreviewStage: View {
                 Text(L("预览", "Preview"))
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(TF.settingsText)
+
+                if let mode {
+                    Text(mode.localizedDisplayName)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(TF.settingsTextSecondary)
+                }
 
                 Spacer()
 
@@ -163,12 +170,16 @@ struct AppearancePreviewStage: View {
         .task(id: "\(floatingBarSampleText)_\(previewPhase.rawValue)") {
             updateDemoState()
         }
+        .onChange(of: mode) { _, newMode in
+            demoState.currentMode = newMode ?? .direct
+        }
         .onDisappear {
             demoState.stop()
         }
     }
 
     private func updateDemoState() {
+        demoState.currentMode = mode ?? .direct
         switch previewPhase {
         case .recording:
             demoState.startAppearancePreview(sampleText: floatingBarSampleText)
