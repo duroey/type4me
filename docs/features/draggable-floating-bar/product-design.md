@@ -1,10 +1,10 @@
 # Type4Me 录音指示器拖动定位产品设计
 
 > 文档类型：产品设计
-> 文档状态：当前有效（已实现，待用户验收）
+> 文档状态：当前有效（已实现，持续验证）
 > 设计日期：2026-10-14
 > 最后校验：2026-10-14
-> 实现基线：`feat/draggable-floating-bar`
+> 实现基线：`3c1346ec`（PR #342）
 > 关联开发设计：[development-design.md](development-design.md)
 
 ## 1. 背景

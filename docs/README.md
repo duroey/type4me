@@ -21,7 +21,7 @@
 
 | 功能 | 文档 | 类型 | 状态 | 设计日期 | 实现基线 |
 |---|---|---|---|---:|---|
-| 录音指示器拖动定位 | [产品设计](features/draggable-floating-bar/product-design.md) / [开发设计](features/draggable-floating-bar/development-design.md) | 产品与开发设计 | 已实现，待用户验收 | 2026-10-14 | `feat/draggable-floating-bar` |
+| 录音指示器拖动定位 | [产品设计](features/draggable-floating-bar/product-design.md) / [开发设计](features/draggable-floating-bar/development-design.md) | 产品与开发设计 | 已实现，持续验证 | 2026-10-14 | `3c1346ec`（PR #342） |
 | 历史与用量看板 | [产品设计](features/usage-analytics/product-design.md) / [开发设计](features/usage-analytics/development-design.md) | 产品与开发设计 | 已实现，持续验证 | 2026-09-22 | `927f84b`（PR #318） |
 | 当前键盘焦点回写（简化输入目标） | [产品设计](features/current-focus-injection/product-design.md) / [开发设计](features/current-focus-injection/development-design.md) | 产品与开发设计 | 已实现，持续验证 | 2026-09-10 | `0da8693`（PR #297） |
 | 首次设置与权限引导 | [产品设计](features/setup-guide/product-design.md) | 产品设计 | 已实现，待用户验收 | 2026-09-08 | `bafecde` |
