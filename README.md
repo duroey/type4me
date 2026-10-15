@@ -22,8 +22,8 @@ Type4Me 是一款免费开源的 macOS 语音输入法。按下快捷键说话�
 
 | 版本 | 说明 | 大小 |
 | --- | --- | --- |
-| ✨ **[云端版（推荐）](https://github.com/joewongjc/type4me/releases/download/v2.10.0/Type4Me-v2.10.0-cloud.dmg)** | Intel 与 Apple Silicon 通用。需要自备语音识别和大模型的 API Key，识别推荐火山引擎（豆包）或 Soniox。[配置指引](https://my.feishu.cn/wiki/QdEnwBMfUi0mN4k3ucMcNYhUnXr) | ~14 MB |
-| **[本地版](https://github.com/joewongjc/type4me/releases/download/v2.10.0/Type4Me-v2.10.0-local-apple-silicon.dmg)** | 仅支持 Apple Silicon。内置 SenseVoice + Qwen3-ASR 离线识别，约占 8 GB 内存，建议 32 GB 以上的机器使用；文本处理仍需 API Key 或本地 Ollama | ~720 MB |
+| ✨ **[云端版（推荐）](https://github.com/joewongjc/type4me/releases/download/v2.11.0/Type4Me-v2.11.0-cloud.dmg)** | Intel 与 Apple Silicon 通用。需要自备语音识别和大模型的 API Key，识别推荐火山引擎（豆包）或 Soniox。[配置指引](https://my.feishu.cn/wiki/QdEnwBMfUi0mN4k3ucMcNYhUnXr) | ~14 MB |
+| **[本地版](https://github.com/joewongjc/type4me/releases/download/v2.11.0/Type4Me-v2.11.0-local-apple-silicon.dmg)** | 仅支持 Apple Silicon。内置 SenseVoice + Qwen3-ASR 离线识别，约占 8 GB 内存，建议 32 GB 以上的机器使用；文本处理仍需 API Key 或本地 Ollama | ~720 MB |
 
 需要 macOS 14 (Sonoma) 及以上。两个版本共用一份配置，可以随时互相替换。安装包已通过 Apple 公证，首次打开按引导授予**麦克风**和**辅助功能**权限就能用。
 
@@ -52,11 +52,12 @@ Type4Me 是一款免费开源的 macOS 语音输入法。按下快捷键说话�
 
 ## 功能扩展
 
-- **本地、云端语音识别**：下载本地版，可用 SenseVoice + Qwen3-ASR进行识别，完全免费；云端支持火山引擎（豆包）、Soniox、OpenAI 等 15 家服务。
-- **大模型随意换**：豆包、DeepSeek、Kimi、智谱、MiniMax、小米 MiMo、OpenAI、Claude、Gemini、OpenRouter，也可以接 Ollama、Magpie 或任意 OpenAI 兼容接口。
+- **本地、云端语音识别**：下载本地版，可用 SenseVoice + Qwen3-ASR 识别，完全免费；云端支持 15 家服务。阶跃星辰、百炼、Gemini、ElevenLabs、Grok 和 Azure MAI 可切换实时流式或批量识别，也可接入自定义 HTTP 批量接口。
+- **大模型随意换**：豆包、DeepSeek、Kimi、智谱、MiniMax、小米 MiMo、OpenAI、Claude、Gemini、OpenRouter，也可以接 Ollama、本机 Magpie 网关或任意 OpenAI 兼容接口；兼容接口还可设置推理强度。
 - **语音改口**：刚输入的文字有错，按 `Fn` + `R` 说「改成下午 2 点」，只改那一处，可以一键或用语音撤销。
 - **词汇管理**：热词提高专有名词的识别率，片段替换可以把「我的邮箱」换成真实地址。装上 [type4me-vocab-skill](https://github.com/joewongjc/type4me-vocab-skill) 后，对 AI Agent 说一句「Qwen3.5 不要识别成 Queen 3.5」，它会帮你把词库维护好。
 - **菜单栏控制中心**：在菜单栏查看录音状态，切换模式、麦克风、识别引擎、文本处理模型和翻译目标语言。
+- **录音显示按模式定制**：为每种模式设置独立的录音球、录音条和提示；也可以拖动录音条到屏幕上的合适位置并吸附边缘。
 - **历史与用量**：保存每次的原始识别和处理结果，支持搜索和导出 CSV；用量看板按模型统计 Token、预估费用和耗时。首页显示输入时长、字数和活跃热力图。
 - **本地备份**：每天自动备份历史、模式、词汇、快捷键和配置，保留最近 7 份。
 - **URL Scheme**：用 `type4me://toggle` 等命令接入 Stream Deck、快捷指令、Raycast、Alfred 或脚本，后台调用不会抢走焦点。见 [命令参考](docs/usage/url-scheme.md)。
