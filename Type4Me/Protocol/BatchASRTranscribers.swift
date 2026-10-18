@@ -16,7 +16,7 @@ struct BailianBatchTranscriber: BatchASRTranscriber {
 
     /// Reuses the host of a custom WebSocket base URL (e.g. the international region).
     static func endpoint(for config: BailianASRConfig) -> URL {
-        let host = URL(string: config.baseURL)?.host ?? defaultHost
+        let host = URL(string: config.baseURL)?.host ?? config.region.batchHost
         return URL(string: "https://\(host)\(path)")!
     }
 
@@ -376,5 +376,124 @@ struct AzureMAIBatchTranscriber: BatchASRTranscriber {
                 .filter { !$0.isEmpty && $0.count <= 50 && seen.insert($0).inserted }
                 .prefix(100)
         )
+    }
+}
+
+// MARK: - Groq Whisper
+
+/// Groq-hosted Whisper via the OpenAI-compatible `/audio/transcriptions` endpoint.
+struct GroqBatchTranscriber: BatchASRTranscriber {
+    static let endpoint = URL(string: "https://api.groq.com/openai/v1/audio/transcriptions")!
+
+    let providerName = "Groq"
+    /// 25 MB free-tier upload cap ≈ 13.6 min of 16 kHz mono WAV; keep headroom for multipart overhead.
+    let maxDuration: TimeInterval? = 12 * 60
+    /// Whisper hallucinates on very short clips.
+    let minimumDuration: TimeInterval = 0.5
+    let suggestsRealtimeFallback = false
+    /// Whisper invents text on silence (G-5); skip uploads with no audible signal.
+    let skipsSilentAudio = true
+
+    /// Groq rejects prompts over 896 UTF-8 bytes with HTTP 400 (G-2); keep a small margin.
+    static let promptByteBudget = 880
+
+    static func prompt(hotwords: [String]) -> String {
+        var seen = Set<String>()
+        var cleanHotwords: [String] = []
+        for h in hotwords {
+            let trimmed = h.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty && seen.insert(trimmed).inserted {
+                cleanHotwords.append(trimmed)
+            }
+        }
+        guard !cleanHotwords.isEmpty else { return "" }
+
+        var currentTerms: [String] = []
+        for term in cleanHotwords {
+            var candidateTerms = currentTerms
+            candidateTerms.append(term)
+            let candidateString = candidateTerms.joined(separator: "、")
+            if candidateString.utf8.count <= promptByteBudget {
+                currentTerms = candidateTerms
+            } else {
+                break
+            }
+        }
+        return currentTerms.joined(separator: "、")
+    }
+
+    func makeRequest(pcmData: Data, config: any ASRProviderConfig, options: ASRRequestOptions) throws -> URLRequest {
+        guard let config = config as? GroqASRConfig else {
+            throw BatchASRError.invalidConfig(provider: providerName)
+        }
+
+        var body = MultipartFormBody()
+        body.append(name: "model", value: config.model.rawValue)
+        body.append(name: "response_format", value: "verbose_json")
+        body.append(name: "temperature", value: "0")
+
+        if !config.language.isEmpty {
+            body.append(name: "language", value: config.language)
+        }
+
+        let promptString = Self.prompt(hotwords: options.hotwords)
+        if !promptString.isEmpty {
+            body.append(name: "prompt", value: promptString)
+        }
+
+        let wavData = WAVEncoder.encode(pcmData: pcmData)
+        body.append(name: "file", filename: "audio.wav", mimeType: "audio/wav", fileData: wavData)
+
+        var request = URLRequest(url: Self.endpoint)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(config.apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue(body.contentType, forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = BatchASRHTTP.requestTimeout
+        request.httpBody = body.finalized()
+        return request
+    }
+
+    func parseTranscript(from data: Data, options: ASRRequestOptions) throws -> String {
+        try parseInternal(from: data, config: nil, options: options)
+    }
+
+    func parseTranscript(from data: Data, config: any ASRProviderConfig, options: ASRRequestOptions) throws -> String {
+        try parseInternal(from: data, config: config, options: options)
+    }
+
+    private func parseInternal(from data: Data, config: (any ASRProviderConfig)?, options: ASRRequestOptions) throws -> String {
+        guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw BatchASRError.invalidResponse(provider: providerName)
+        }
+
+        var text = (root["text"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if text.isEmpty, let segments = root["segments"] as? [[String: Any]] {
+            text = segments.compactMap { $0["text"] as? String }.joined().trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        guard !text.isEmpty else { return "" }
+
+        // 1. Filter known hallucination phrases (combining text and audio evidence)
+        if GroqHallucinationPhrases.isHallucination(text: text, responseRoot: root) {
+            return ""
+        }
+
+        // 2. Hotword echo sanitization
+        text = ASRHotwordLeakSanitizer.sanitize(text, hotwords: options.hotwords)
+        guard !text.isEmpty else { return "" }
+
+        // 3. Simplified Chinese conversion when language is Chinese
+        let detectedLanguage = (root["language"] as? String)?.lowercased()
+        let groqConfig = config as? GroqASRConfig
+        let isConfiguredZh = groqConfig?.language == "zh"
+        let isAutoZh = (groqConfig?.language.isEmpty ?? true) && AppLanguage.current == .zh
+
+        if (detectedLanguage == "chinese" || isConfiguredZh) && (isConfiguredZh || isAutoZh) {
+            if let converted = text.applyingTransform(StringTransform("Hant-Hans"), reverse: false) {
+                text = converted
+            }
+        }
+
+        return text.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }

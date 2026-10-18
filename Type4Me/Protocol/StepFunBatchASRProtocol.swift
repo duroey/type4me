@@ -48,7 +48,7 @@ enum StepFunBatchASRProtocol {
 
         let transcription = Transcription(
             hotwords: options.hotwords.isEmpty ? nil : options.hotwords,
-            model: StepFunASRConfig.batchModel,
+            model: config.batchModel,
             enableITN: true
         )
         let body = RequestBody(
@@ -76,6 +76,41 @@ enum StepFunBatchASRProtocol {
         request.httpBody = try JSONEncoder().encode(body)
         return request
     }
+    static func validate(
+        config: StepFunASRConfig,
+        options: ASRRequestOptions
+    ) async throws {
+        let silence = Data(count: 16_000)
+        let request = try buildRequest(pcmData: silence, config: config, options: options)
+        let session = URLSession(configuration: options.urlSessionConfiguration)
+        let (bytes, response) = try await session.bytes(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw StepFunBatchASRError.requestFailed(code: 0, message: nil)
+        }
+        guard http.statusCode == 200 else {
+            var body = Data()
+            for try await byte in bytes {
+                body.append(byte)
+                if body.count >= 500 { break }
+            }
+            let message = String(data: body, encoding: .utf8)?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            throw StepFunBatchASRError.requestFailed(code: http.statusCode, message: message)
+        }
+
+        // Consume SSE events to verify business acceptance (detect error events in stream)
+        for try await line in bytes.lines {
+            if let event = try parseSSELine(line) {
+                switch event {
+                case .delta, .done:
+                    return
+                case .error(let message):
+                    throw StepFunBatchASRError.requestFailed(code: 200, message: message)
+                }
+            }
+        }
+    }
+
 
     static func parseSSELine(_ line: String) throws -> StepFunBatchSSEEvent? {
         guard line.hasPrefix("data:") else { return nil }

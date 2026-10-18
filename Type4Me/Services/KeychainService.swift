@@ -108,6 +108,7 @@ enum KeychainService {
             return provider
         }
         set {
+            guard !newValue.isDeprecated else { return }
             let previous = selectedASRProvider
             UserDefaults.standard.set(newValue.rawValue, forKey: selectedProviderKey)
             guard previous != newValue else { return }

@@ -281,10 +281,17 @@ actor RecognitionSession {
             return "\(providerName) · \(CartesiaASRConfig.model)"
         }
         if provider == .stepfun {
-            return "\(providerName) · \(isBatch ? StepFunASRConfig.batchModel : StepFunASRConfig.model)"
+            if let stepConfig = config as? StepFunASRConfig {
+                let m = isBatch ? stepConfig.batchModel : stepConfig.model
+                return "\(providerName) · \(m)"
+            }
+            return "\(providerName) · \(isBatch ? StepFunASRConfig.defaultBatchModel : StepFunASRConfig.defaultModel)"
         }
         if provider == .grok {
             return "\(providerName) · \(GrokASRConfig.model)"
+        }
+        if provider == .tencent {
+            return "\(providerName) · \(TencentASRConfig.engineModelType)"
         }
         if provider == .azure {
             let deployment = (config as? AzureASRConfig)?.deployment ?? AzureASRConfig.streamingModel
@@ -382,6 +389,14 @@ actor RecognitionSession {
             return config.recognitionMode == .batch
                 ? StepFunASRRegion.china.healthEndpoint
                 : config.region.healthEndpoint
+        case .bailian:
+            guard let config = KeychainService.loadASRConfig(for: .bailian) as? BailianASRConfig else {
+                return BailianASRRegion.default.healthEndpoint
+            }
+            if !config.baseURL.isEmpty, let host = URL(string: config.baseURL)?.host {
+                return "https://\(host)"
+            }
+            return config.region.healthEndpoint
         case .soniox:
             return "https://stt-rt.soniox.com"
         case .deepgram:

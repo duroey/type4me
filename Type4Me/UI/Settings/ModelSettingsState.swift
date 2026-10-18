@@ -114,7 +114,12 @@ enum ModelSettingsHelpers {
             let locSet = Set(localASRProviders)
             return all
                 .filter { !recSet.contains($0) && !locSet.contains($0) }
-                .sorted { $0.displayName.localizedAlphabeticalCompare($1.displayName) == .orderedAscending }
+                .sorted { a, b in
+                    if a.isDeprecated != b.isDeprecated {
+                        return !a.isDeprecated
+                    }
+                    return a.displayName.localizedAlphabeticalCompare(b.displayName) == .orderedAscending
+                }
         }
     }
 
@@ -197,6 +202,9 @@ enum ModelSettingsHelpers {
         case .gemini:      return "sparkles"
         case .grok:        return "brain.head.profile"
         case .metaMuse:    return "waveform.badge.mic"
+        case .groq:        return "cpu"
+        case .mistral:     return "wind"
+        case .tencent:     return "cloud.bolt.fill"
         case .stepfun:     return "bolt.horizontal.fill"
         case .mimo:        return "message.and.waveform.fill"
         case .bailian:     return "cloud.fill"

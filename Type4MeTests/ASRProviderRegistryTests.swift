@@ -9,6 +9,21 @@ final class ASRProviderRegistryTests: XCTestCase {
         }
     }
 
+    func testSelectedASRProvider_retainsExistingDeprecatedSelection() {
+        let key = "tf_selectedASRProvider"
+        let original = UserDefaults.standard.string(forKey: key)
+        defer {
+            if let original {
+                UserDefaults.standard.set(original, forKey: key)
+            } else {
+                UserDefaults.standard.removeObject(forKey: key)
+            }
+        }
+
+        UserDefaults.standard.set(ASRProvider.baidu.rawValue, forKey: key)
+        XCTAssertEqual(KeychainService.selectedASRProvider, .baidu, "Existing configuration must not be silently redirected to Volcano")
+    }
+
     func testResolvedModeFallsBackToDirectForUnavailableProvider() {
         let customMode = ProcessingMode(
             id: UUID(),
@@ -81,7 +96,7 @@ final class ASRProviderRegistryTests: XCTestCase {
 
     func testCapabilities_distinguishRealtimeAndNonRealtimeProviders() {
         // Non-realtime (batch audio submission after hotkey release)
-        for nonRealtime in [ASRProvider.openai, .mimo] {
+        for nonRealtime in [ASRProvider.openai, .mimo, .groq, .mistral] {
             let caps = ASRProviderRegistry.capabilities(for: nonRealtime)
             XCTAssertTrue(caps.isAvailable)
             XCTAssertFalse(caps.isStreaming)
@@ -91,7 +106,7 @@ final class ASRProviderRegistryTests: XCTestCase {
         // Realtime streaming providers
         for realtime in [
             ASRProvider.apple, .volcano, .deepgram, .cartesia,
-            .assemblyai, .elevenlabs, .gemini, .grok, .soniox, .metaMuse, .stepfun, .bailian, .baidu
+            .assemblyai, .elevenlabs, .gemini, .grok, .soniox, .metaMuse, .stepfun, .bailian, .baidu, .tencent
         ] {
             let caps = ASRProviderRegistry.capabilities(for: realtime)
             XCTAssertTrue(caps.isAvailable)
@@ -107,19 +122,19 @@ final class ASRProviderRegistryTests: XCTestCase {
     }
 
     func testRecognitionModeSelection_isOfferedByProvidersWithBatchVariant() {
-        for provider in [ASRProvider.stepfun, .bailian, .gemini, .elevenlabs, .grok, .azure] {
+        for provider in [ASRProvider.stepfun, .bailian, .gemini, .elevenlabs, .grok, .azure, .tencent] {
             XCTAssertTrue(ASRProviderRegistry.supportsRecognitionModeSelection(for: provider), "\(provider)")
             let fields = ASRProviderRegistry.configType(for: provider)?.credentialFields ?? []
             XCTAssertEqual(fields.first?.key, ASRRecognitionMode.credentialKey, "\(provider)")
             XCTAssertEqual(fields.first?.defaultValue, ASRRecognitionMode.streaming.rawValue, "\(provider)")
         }
-        for provider in [ASRProvider.volcano, .deepgram, .soniox, .openai, .mimo, .baidu] {
+        for provider in [ASRProvider.volcano, .deepgram, .soniox, .openai, .mimo, .baidu, .groq, .mistral] {
             XCTAssertFalse(ASRProviderRegistry.supportsRecognitionModeSelection(for: provider), "\(provider)")
         }
     }
 
     func testCapabilities_followRequestedRecognitionMode() {
-        for provider in [ASRProvider.stepfun, .bailian, .gemini, .elevenlabs, .grok, .azure] {
+        for provider in [ASRProvider.stepfun, .bailian, .gemini, .elevenlabs, .grok, .azure, .tencent] {
             let streaming = ASRProviderRegistry.capabilities(for: provider, mode: .streaming)
             XCTAssertTrue(streaming.isStreaming, "\(provider)")
             XCTAssertTrue(streaming.supportsRealtimeRecognition, "\(provider)")
