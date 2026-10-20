@@ -1,16 +1,18 @@
 # Changelog
 
-## Unreleased
+## v2.12.0 — 语音识别服务扩展与麦克风回退修复 (2026-10-20)
+
+v2.12.0 新增 Groq、Mistral AI 与腾讯云语音识别服务商，并修复麦克风优先级模式下无法回退到蓝牙系统麦克风的问题。
 
 ### 新功能
 
-- **Groq Whisper 语音识别**：新增 Groq 非实时语音识别服务商，提供 Whisper Large v3 Turbo 与 Large v3 模型，支持热词、静音能量过滤、已知幻觉过滤与中文自动繁简转换
-- **Mistral AI Voxtral 语音识别**：新增 Mistral AI 非实时语音识别服务商，支持专有转写模型 Voxtral Mini Transcribe 2（原生 context_bias 热词）与指令模型 Voxtral Small（严格转写与防偏离约束）
-- **腾讯云 ASR 中英大模型 2.0**：腾讯云由占位变为正式可用，采用中英大模型 2.0（16k_zh_en_2.0）引擎，支持实时流式（WebSocket 双协议兼容）与非实时（CreateRecTask 异步任务轮询）自由切换
+- **Groq Whisper 语音识别**：新增 Groq 非实时语音识别服务商，提供 Whisper Large v3 Turbo 与 Large v3 模型，支持热词、静音能量过滤、已知幻觉过滤与中文自动繁简转换。
+- **Mistral AI Voxtral 语音识别**：新增 Mistral AI 非实时语音识别服务商，支持专有转写模型 Voxtral Mini Transcribe 2（原生 context_bias 热词）与指令模型 Voxtral Small（严格转写与防偏离约束）。
+- **腾讯云 ASR 中英大模型 2.0**：腾讯云由占位变为正式可用，采用中英大模型 2.0（16k_zh_en_2.0）引擎，支持实时流式（WebSocket 双协议兼容）与非实时（CreateRecTask 异步任务轮询）自由切换。
 
-### Bug 修复
+### 改进与修复
 
-- **麦克风优先级回退**：优先级列表中的麦克风都不可用时，按「末尾跟随系统」使用系统默认输入（包括蓝牙麦克风），不再报错「首选麦克风不可用，未自动切换至蓝牙麦克风」
+- **麦克风优先级回退**：优先级列表中的麦克风都不可用时，按「末尾跟随系统」使用系统默认输入（包括蓝牙麦克风），不再报错「首选麦克风不可用，未自动切换至蓝牙麦克风」。
 
 ## v2.11.0 — 录音条自定义与 AI 服务扩展 (2026-10-19)
 
