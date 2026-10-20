@@ -1294,8 +1294,6 @@ actor RecognitionSession {
                 selectedDeviceUID = uid
             case .systemDefault:
                 selectedDeviceUID = nil
-            case .unavailable:
-                throw AudioCaptureError.preferredInputDeviceUnavailable
             }
             let preferenceMode = AudioInputDevicePreferenceStore.mode().rawValue
             let priorityUIDs = AudioInputDevicePreferenceStore.priorityEntries().map(\.uid).joined(separator: ",")

@@ -41,7 +41,6 @@ enum AudioInputDevicePreferenceMode: String {
 enum AudioInputCaptureResolution: Equatable {
     case explicitDevice(uid: String)
     case systemDefault
-    case unavailable
 }
 
 struct AudioInputDevicePreferenceEntry: Codable, Equatable, Identifiable {
@@ -93,10 +92,9 @@ enum AudioInputDevicePreferenceStore {
         return resolvedDevice(devices: devices)?.uid
     }
 
-    /// Resolves the input policy used for capture. In priority mode, silently
-    /// falling back to a Bluetooth system default can switch the headset to its
-    /// low-bandwidth call profile and interrupt media playback, so that fallback
-    /// is deliberately rejected unless the user explicitly follows the system.
+    /// Resolves the input policy used for capture. In priority mode, the first
+    /// available priority device wins; otherwise the priority list ends with
+    /// "follow system", so the system default (Bluetooth included) is used.
     static func captureResolution(
         devices: [AudioInputDevice],
         systemDefault: AudioInputDevice?
@@ -105,7 +103,6 @@ enum AudioInputDevicePreferenceStore {
         if let device = resolvedDevice(devices: devices) {
             return .explicitDevice(uid: device.uid)
         }
-        guard systemDefault?.category != .bluetooth else { return .unavailable }
         return .systemDefault
     }
 
@@ -191,29 +188,23 @@ enum AudioInputDevicePreferenceStore {
         return nil
     }
 
-    /// The device Type4Me will use for the next recording. In priority mode,
-    /// an unavailable preferred device may fall back to a non-Bluetooth system
-    /// input, but never implicitly activates a Bluetooth headset microphone.
+    /// The device Type4Me will use for the next recording: the first available
+    /// priority device, otherwise the system default.
     static func activeInputDevice(
         devices: [AudioInputDevice],
         systemDefault: AudioInputDevice?
     ) -> AudioInputDevice? {
-        guard mode() == .priority else { return systemDefault }
-        if let resolved = resolvedDevice(devices: devices) {
-            return resolved
-        }
-        guard systemDefault?.category != .bluetooth else { return nil }
-        return systemDefault
+        resolvedDevice(devices: devices) ?? systemDefault
     }
 
     /// Keep-alive is only useful for an actively selected Bluetooth microphone.
-    /// Built-in, wired and USB microphones must not open the system-default
-    /// Bluetooth input as a side effect.
+    /// In priority mode, falling back to a system-default Bluetooth input is fine
+    /// for a recording, but keeping it open would pin the headset in call mode.
     static func keepAliveInputDevice(
         devices: [AudioInputDevice],
         systemDefault: AudioInputDevice?
     ) -> AudioInputDevice? {
-        let active = activeInputDevice(devices: devices, systemDefault: systemDefault)
+        let active = mode() == .priority ? resolvedDevice(devices: devices) : systemDefault
         return active?.category == .bluetooth ? active : nil
     }
 

@@ -137,7 +137,7 @@ final class AudioInputDevicePreferenceTests: XCTestCase {
         XCTAssertEqual(active, systemDefault)
     }
 
-    func testActiveDeviceDoesNotImplicitlyFallBackToBluetooth() {
+    func testActiveDeviceFallsBackToBluetoothSystemDefault() {
         AudioInputDevicePreferenceStore.savePriorityEntries([
             AudioInputDevicePreferenceEntry(uid: "built-in", name: "MacBook Pro Microphone"),
         ])
@@ -152,7 +152,7 @@ final class AudioInputDevicePreferenceTests: XCTestCase {
             systemDefault: airPods
         )
 
-        XCTAssertNil(active)
+        XCTAssertEqual(active, airPods)
     }
 
     func testActiveDevicePrefersAvailablePriorityDeviceOverSystemDefault() {
@@ -197,7 +197,7 @@ final class AudioInputDevicePreferenceTests: XCTestCase {
         XCTAssertEqual(resolution, .explicitDevice(uid: builtIn.uid))
     }
 
-    func testCaptureResolutionRejectsImplicitBluetoothFallback() {
+    func testCaptureResolutionFallsBackToBluetoothSystemDefault() {
         let airPods = AudioInputDevice(
             uid: "airpods",
             name: "AirPods Pro",
@@ -212,7 +212,7 @@ final class AudioInputDevicePreferenceTests: XCTestCase {
             systemDefault: airPods
         )
 
-        XCTAssertEqual(resolution, .unavailable)
+        XCTAssertEqual(resolution, .systemDefault)
     }
 
     func testCaptureResolutionAllowsExplicitFollowSystemBluetooth() {
@@ -248,6 +248,24 @@ final class AudioInputDevicePreferenceTests: XCTestCase {
 
         let keepAlive = AudioInputDevicePreferenceStore.keepAliveInputDevice(
             devices: [builtIn, airPods],
+            systemDefault: airPods
+        )
+
+        XCTAssertNil(keepAlive)
+    }
+
+    func testKeepAliveDoesNotOpenBluetoothSystemDefaultFallback() {
+        let airPods = AudioInputDevice(
+            uid: "airpods",
+            name: "AirPods Pro",
+            category: .bluetooth
+        )
+        AudioInputDevicePreferenceStore.savePriorityEntries([
+            AudioInputDevicePreferenceEntry(uid: "wired", name: "USB Microphone"),
+        ])
+
+        let keepAlive = AudioInputDevicePreferenceStore.keepAliveInputDevice(
+            devices: [airPods],
             systemDefault: airPods
         )
 

@@ -4,7 +4,6 @@ enum AudioCaptureError: Error, LocalizedError {
     case converterCreationFailed
     case microphonePermissionDenied
     case noInputDevice
-    case preferredInputDeviceUnavailable
 
     var errorDescription: String? {
         switch self {
@@ -14,11 +13,6 @@ enum AudioCaptureError: Error, LocalizedError {
             return L("未授予麦克风权限", "Microphone permission not granted")
         case .noInputDevice:
             return L("找不到麦克风", "No microphone found")
-        case .preferredInputDeviceUnavailable:
-            return L(
-                "首选麦克风不可用，未自动切换至蓝牙麦克风。请重新连接或在设置中指定麦克风",
-                "Preferred microphone unavailable and will not fall back to Bluetooth. Reconnect it or choose another microphone in Settings"
-            )
         }
     }
 }
