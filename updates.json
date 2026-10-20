@@ -1,6 +1,17 @@
 {
-  "latest": "2.11.0",
+  "latest": "2.12.0",
   "releases": [
+    {
+      "version": "2.12.0",
+      "date": "2026-10-20",
+      "notes": "### 新功能\n\n- **Groq Whisper 语音识别**：新增 Groq 非实时语音识别服务商，提供 Whisper Large v3 Turbo 与 Large v3 模型，支持热词、静音能量过滤、已知幻觉过滤与中文自动繁简转换。\n- **Mistral AI Voxtral 语音识别**：新增 Mistral AI 非实时语音识别服务商，支持专有转写模型 Voxtral Mini Transcribe 2（原生 context_bias 热词）与指令模型 Voxtral Small（严格转写与防偏离约束）。\n- **腾讯云 ASR 中英大模型 2.0**：腾讯云由占位变为正式可用，采用中英大模型 2.0（16k_zh_en_2.0）引擎，支持实时流式（WebSocket 双协议兼容）与非实时（CreateRecTask 异步任务轮询）自由切换。\n\n### 改进与修复\n\n- **麦克风优先级回退**：优先级列表中的麦克风都不可用时，按「末尾跟随系统」使用系统默认输入（包括蓝牙麦克风），不再报错「首选麦克风不可用，未自动切换至蓝牙麦克风」。",
+      "cloud_dmg_url": "https://github.com/joewongjc/type4me/releases/download/v2.12.0/Type4Me-v2.12.0-cloud.dmg",
+      "cloud_dmg_size": 16157617,
+      "cloud_dmg_sha256": "7eb5645195879e22662431a653d28b12cf8d8aaccc18624d50fd1d2ce988e700",
+      "local_dmg_url": "https://github.com/joewongjc/type4me/releases/download/v2.12.0/Type4Me-v2.12.0-local-apple-silicon.dmg",
+      "local_dmg_size": 717908674,
+      "local_dmg_sha256": "1696f91d53912091046d4afb56ac91407bbbee76321abadc7526678ff19575a6"
+    },
     {
       "version": "2.11.0",
       "date": "2026-10-19",
