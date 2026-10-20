@@ -1,6 +1,17 @@
 {
-  "latest": "2.10.0",
+  "latest": "2.11.0",
   "releases": [
+    {
+      "version": "2.11.0",
+      "date": "2026-10-19",
+      "notes": "### 新功能\n\n- **云端语音识别批量模式**：阶跃星辰、百炼、Gemini、ElevenLabs 和 Grok 可在实时流式与批量识别间切换；原有配置默认继续使用实时识别。\n- **Microsoft Azure MAI 语音识别**：新增 MAI-Transcribe-2-Streaming 实时识别和 MAI-Transcribe-2 批量识别，并提供资源配置、连接测试与逐字稿选项。\n- **自定义 HTTP 批量识别**：可配置端点、鉴权、请求头、JSON 或 multipart 音频上传模板及响应文本路径，接入兼容的批量识别服务。\n- **Magpie 本机模型网关**：将本机 Magpie 加为文本处理服务，支持直连或 Agent 托管接入、模型同步和推理档位适配。\n- **兼容大模型推理强度**：自定义 OpenAI 兼容服务可设置 reasoning effort；留空时保持原有请求格式。\n- **按模式配置录音显示**：为不同模式分别设置主题、录音球与指示条样式、实时文本及提示；默认跟随全局配置。\n- **拖动录音条自定义位置**：可将录音条拖到合适位置并吸附屏幕参考线；抓手条独立悬浮，名称、提示和可拖动区域也经过调整。\n\n### 改进与修复\n\n- **原生 Liquid Glass 录音条**：调整玻璃通透感，同时恢复深色底垫对比度，保持浅色与深色背景下的可读性。\n- **设置按钮体验统一**：统一主次按钮的尺寸、颜色、悬停、按下和禁用反馈，让设置页与引导界面的操作更一致。\n- **连接测试显示时延**：测试连接成功后显示本次请求时延，便于判断服务商的网络状况；测试中按钮显示加载动画，结果以 ✓ 或 ✕ 标在按钮旁。\n- **服务商图标适配深色模式**：更新服务商品牌图标，并改善单色图标在深色界面中的辨识度。\n- **「4!」小尺寸品牌标识**：新增适用于菜单栏的小尺寸标识，并用于菜单栏和应用图标。\n\n<p align=\"center\">\n  <img src=\"https://raw.githubusercontent.com/joewongjc/type4me/2fea496149e9d96e170358ec36616d4b8f483dd0/Type4Me/Resources/Assets/type4me-mark-color.svg\" width=\"180\" alt=\"Type4Me 的 4! 小尺寸品牌标识\" />\n</p>\n\n- **设置列表悬停修复**：移除浅色模式下侧栏和列表项悬停时短暂闪黑的问题。\n- **应用内语音输入**：在 Type4Me 自己的可编辑文本框中使用语音输入时，文字会插入当前光标位置。\n- **音量恢复更可靠**：记录并恢复录音前的输出设备、音量和静音状态；设备切换或恢复写入失败时会继续校验和重试。\n- **AssemblyAI 默认模型更新**：默认实时模型升级到 Universal-3.6 Pro Realtime。\n- **Magpie 插件安装命令更新**：切换到 Magpie 社区插件包名。",
+      "cloud_dmg_url": "https://github.com/joewongjc/type4me/releases/download/v2.11.0/Type4Me-v2.11.0-cloud.dmg",
+      "cloud_dmg_size": 16023997,
+      "cloud_dmg_sha256": "668107535b0c01abe7e8bdd4c9c645f56f6547ffcfe7ab0437109b29230c4fe3",
+      "local_dmg_url": "https://github.com/joewongjc/type4me/releases/download/v2.11.0/Type4Me-v2.11.0-local-apple-silicon.dmg",
+      "local_dmg_size": 717781694,
+      "local_dmg_sha256": "c9521ab96ee2553d952ae98a11986fb852d088012c30775b10abcc8b35bc1385"
+    },
     {
       "version": "2.10.0",
       "date": "2026-09-23",
