@@ -22,8 +22,8 @@ Type4Me is a free, open-source voice input app for macOS. Hold a hotkey and talk
 
 | Edition | Details | Size |
 | --- | --- | --- |
-| ✨ **[Cloud (recommended)](https://github.com/joewongjc/type4me/releases/download/v2.10.0/Type4Me-v2.10.0-cloud.dmg)** | Intel and Apple Silicon. Bring your own speech and LLM API keys; Volcano Engine (Doubao) or Soniox recommended for recognition. [Setup guide](https://my.feishu.cn/wiki/QdEnwBMfUi0mN4k3ucMcNYhUnXr) | ~14 MB |
-| **[Local](https://github.com/joewongjc/type4me/releases/download/v2.10.0/Type4Me-v2.10.0-local-apple-silicon.dmg)** | Apple Silicon only. Bundles SenseVoice + Qwen3-ASR for offline recognition (~8 GB RAM, 32 GB+ Macs recommended). Text processing still needs an API key or local Ollama | ~720 MB |
+| ✨ **[Cloud (recommended)](https://github.com/joewongjc/type4me/releases/download/v2.11.0/Type4Me-v2.11.0-cloud.dmg)** | Intel and Apple Silicon. Bring your own speech and LLM API keys; Volcano Engine (Doubao) or Soniox recommended for recognition. [Setup guide](https://my.feishu.cn/wiki/QdEnwBMfUi0mN4k3ucMcNYhUnXr) | ~16 MB |
+| **[Local](https://github.com/joewongjc/type4me/releases/download/v2.11.0/Type4Me-v2.11.0-local-apple-silicon.dmg)** | Apple Silicon only. Bundles SenseVoice + Qwen3-ASR for offline recognition (~8 GB RAM, 32 GB+ Macs recommended). Text processing still needs an API key or local Ollama | ~720 MB |
 
 Requires macOS 14 (Sonoma) or later. Both editions share the same settings, so you can switch anytime. The app is notarized by Apple; on first launch, grant **Microphone** and **Accessibility** access as prompted.
 
@@ -52,11 +52,12 @@ Examples and use cases for each mode: [Modes & Features](docs/usage/modes.en.md)
 
 ## Extended features
 
-- **Local and cloud recognition**: the Local edition runs SenseVoice + Qwen3-ASR on your Mac, completely free; in the cloud, choose from 18 services including Volcano Engine (Doubao), Soniox, OpenAI, Groq, Mistral AI, and Tencent Cloud.
-- **Any LLM**: Doubao, DeepSeek, Kimi, Zhipu, MiniMax, Xiaomi MiMo, OpenAI, Claude, Gemini, OpenRouter, or Ollama, Magpie and any OpenAI-compatible endpoint.
+- **Local and cloud recognition**: the Local edition runs SenseVoice + Qwen3-ASR on your Mac, completely free; in the cloud, choose from 18 services including Volcano Engine (Doubao), Soniox, OpenAI, Groq, Mistral AI, and Tencent Cloud. StepFun, Bailian, Gemini, ElevenLabs, Grok and Azure MAI offer a choice of real-time streaming or batch recognition, and custom HTTP batch endpoints are supported too.
+- **Any LLM**: Doubao, DeepSeek, Kimi, Zhipu, MiniMax, Xiaomi MiMo, OpenAI, Claude, Gemini and OpenRouter, plus Ollama, the local Magpie gateway and any OpenAI-compatible endpoint. Compatible endpoints can also set reasoning effort.
 - **Voice Revise**: Spotted a mistake? Press `Fn` + `R` and say "make it 2 PM" — only that part changes, and you can undo by button or voice.
 - **Vocabulary**: hotwords improve recognition of names and jargon; snippets expand phrases like "my email" into the real address. With [type4me-vocab-skill](https://github.com/joewongjc/type4me-vocab-skill) installed, tell your AI agent "don't transcribe Qwen3.5 as Queen 3.5" and it maintains your vocabulary for you.
 - **Menu bar control center**: see recording status and switch mode, microphone, speech engine, LLM and translation target from the menu bar.
+- **Recording display per mode**: choose a different orb, bar style and hints for each mode, then drag the recording bar where it works best and snap it to screen edges.
 - **History & usage**: every raw transcript and processed result is saved, searchable and exportable to CSV; the usage dashboard tracks tokens, estimated cost and latency per model. The home page shows time spoken, word count and an activity heatmap.
 - **Local backups**: history, modes, vocabulary, hotkeys and settings are snapshotted daily; the latest seven are kept.
 - **URL Scheme**: drive recording from Stream Deck, Shortcuts, Raycast, Alfred or scripts with commands like `type4me://toggle`, without stealing focus. See the [command reference](docs/usage/url-scheme.en.md).
