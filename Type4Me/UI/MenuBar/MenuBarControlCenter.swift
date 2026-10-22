@@ -78,6 +78,9 @@ final class MenuBarControlCenterModel {
     private(set) var inputDevices: [AudioInputDevice] = []
     private(set) var configuredASRProviders: [MenuBarASRProviderItem] = []
     private(set) var configuredLLMProviders: [MenuBarLLMProviderItem] = []
+    private(set) var selectedASRProvider: ASRProvider = KeychainService.selectedASRProvider
+    private(set) var selectedLLMProvider: LLMProvider = KeychainService.selectedLLMProvider
+    private(set) var microphonePreferenceMode: AudioInputDevicePreferenceMode = AudioInputDevicePreferenceStore.mode()
     private(set) var canCopyLatestResult = false
     private(set) var permissionIssue: MenuBarPermissionIssue?
     private(set) var canStartRevise = false
@@ -123,7 +126,7 @@ final class MenuBarControlCenterModel {
     }
 
     var selectedProviderLabel: String {
-        let provider = KeychainService.selectedASRProvider
+        let provider = selectedASRProvider
         let isBatch = !ASRProviderRegistry.capabilities(for: provider).supportsRealtimeRecognition
         if isBatch {
             return "\(provider.displayName) (\(L("非实时", "Batch")))"
@@ -148,6 +151,9 @@ final class MenuBarControlCenterModel {
             : cached
         configuredASRProviders = MenuBarASRProviderAvailability.configuredItems()
         configuredLLMProviders = MenuBarLLMProviderAvailability.configuredItems()
+        selectedASRProvider = KeychainService.selectedASRProvider
+        selectedLLMProvider = KeychainService.selectedLLMProvider
+        microphonePreferenceMode = AudioInputDevicePreferenceStore.mode()
         permissionIssue = Self.currentPermissionIssue()
         refreshHistoryAvailability()
         refreshReviseAvailability()
@@ -261,8 +267,10 @@ final class MenuBarActionCoordinator {
         guard appDelegate.menuBarRuntimeSettingsAreEditable else { return }
         switch choice {
         case .systemDefault:
+            guard AudioInputDevicePreferenceStore.mode() != .systemDefault else { return }
             AudioInputDevicePreferenceStore.resetToSystemDefault()
         case .device(let device):
+            guard model.selectedPriorityMicrophoneUID != device.uid else { return }
             AudioInputDevicePreferenceStore.savePriorityEntries([
                 AudioInputDevicePreferenceEntry(uid: device.uid, name: device.name)
             ])
@@ -296,6 +304,7 @@ final class MenuBarActionCoordinator {
 
     func setCJKSpacing(_ mode: CJKSpacingMode) {
         guard appDelegate.menuBarRuntimeSettingsAreEditable else { return }
+        guard UserDefaults.standard.string(forKey: CJKSpacingMode.storageKey) != mode.rawValue else { return }
         UserDefaults.standard.set(mode.rawValue, forKey: CJKSpacingMode.storageKey)
     }
 
@@ -306,6 +315,7 @@ final class MenuBarActionCoordinator {
 
     func setClipboardOutputPolicy(_ policy: ClipboardOutputPolicy) {
         guard appDelegate.menuBarRuntimeSettingsAreEditable else { return }
+        guard UserDefaults.standard.string(forKey: ClipboardOutputPolicy.storageKey) != policy.rawValue else { return }
         UserDefaults.standard.set(policy.rawValue, forKey: ClipboardOutputPolicy.storageKey)
     }
 
@@ -405,6 +415,26 @@ final class MenuBarActionCoordinator {
     }
 }
 
+enum MenuBarSelectionState {
+    static func resolvedASRProvider(raw: String, fallback: ASRProvider) -> ASRProvider {
+        if !raw.isEmpty, let provider = ASRProvider(rawValue: raw) {
+            return provider
+        }
+        return fallback
+    }
+
+    static func resolvedLLMProvider(raw: String, fallback: LLMProvider) -> LLMProvider {
+        if !raw.isEmpty, let provider = LLMProvider(rawValue: raw) {
+            return provider
+        }
+        return fallback
+    }
+
+    static func resolvedMicrophoneMode(raw: String, fallback: AudioInputDevicePreferenceMode) -> AudioInputDevicePreferenceMode {
+        AudioInputDevicePreferenceMode(rawValue: raw) ?? fallback
+    }
+}
+
 struct MenuBarControlCenterView: View {
     @Environment(AppState.self) private var appState
     @Environment(AppUpdater.self) private var appUpdater
@@ -418,6 +448,26 @@ struct MenuBarControlCenterView: View {
     @AppStorage(CJKSpacingMode.storageKey) private var cjkSpacingRaw = CJKSpacingMode.defaultValue
     @AppStorage(CornerQuotePreference.storageKey) private var useCornerQuotes = CornerQuotePreference.defaultValue
     @AppStorage("tf_language") private var language = AppLanguage.systemDefault
+    @AppStorage(KeychainService.selectedASRProviderKey)
+    private var selectedASRProviderRaw = ""
+    @AppStorage(KeychainService.selectedLLMProviderKey)
+    private var selectedLLMProviderRaw = ""
+    @AppStorage(AudioInputDevicePreferenceStore.modeKey)
+    private var microphonePreferenceModeRaw = AudioInputDevicePreferenceMode.systemDefault.rawValue
+    @AppStorage(AudioInputDevicePreferenceStore.priorityEntriesKey)
+    private var microphonePriorityEntriesRaw = ""
+
+    private var currentASRProvider: ASRProvider {
+        MenuBarSelectionState.resolvedASRProvider(raw: selectedASRProviderRaw, fallback: model.selectedASRProvider)
+    }
+
+    private var currentLLMProvider: LLMProvider {
+        MenuBarSelectionState.resolvedLLMProvider(raw: selectedLLMProviderRaw, fallback: model.selectedLLMProvider)
+    }
+
+    private var currentMicrophoneMode: AudioInputDevicePreferenceMode {
+        MenuBarSelectionState.resolvedMicrophoneMode(raw: microphonePreferenceModeRaw, fallback: model.microphonePreferenceMode)
+    }
 
     var body: some View {
         switch appState.barPhase {
@@ -531,14 +581,15 @@ struct MenuBarControlCenterView: View {
     }
 
     private var microphoneMenu: some View {
-        Menu(L("麦克风", "Microphone")) {
+        let _ = microphonePriorityEntriesRaw
+        return Menu(L("麦克风", "Microphone")) {
             menuSelectionToggle(
                 systemDefaultMicrophoneTitle,
-                isSelected: AudioInputDevicePreferenceStore.mode() == .systemDefault
+                isSelected: currentMicrophoneMode == .systemDefault
             ) {
                 actions.setMicrophone(.systemDefault)
             }
-            if AudioInputDevicePreferenceStore.mode() == .priority,
+            if currentMicrophoneMode == .priority,
                let effectiveInputDevice = model.effectiveInputDevice {
                 Label(
                     L(
@@ -587,7 +638,7 @@ struct MenuBarControlCenterView: View {
                 ForEach(model.configuredASRProviders) { item in
                     menuSelectionToggle(
                         item.title,
-                        isSelected: item.provider == KeychainService.selectedASRProvider
+                        isSelected: item.provider == currentASRProvider
                     ) {
                         actions.setASRProvider(item.provider)
                     }
@@ -610,7 +661,7 @@ struct MenuBarControlCenterView: View {
                 ForEach(model.configuredLLMProviders) { item in
                     menuSelectionToggle(
                         item.title,
-                        isSelected: item.provider == KeychainService.selectedLLMProvider
+                        isSelected: item.provider == currentLLMProvider
                     ) {
                         actions.setLLMProvider(item.provider)
                     }
@@ -790,7 +841,9 @@ struct MenuBarControlCenterView: View {
 
     /// macOS menu items only render Text/Label-shaped content, so a custom
     /// HStack checkmark is dropped. `Toggle` is the native checked-item API.
-    /// Unchecking the active row is a no-op, giving radio-group behavior.
+    /// In a radio menu, clicking any row always selects that option.
+    /// Exclusivity and no-op reselection are handled by binding `get` to the
+    /// active state and guarding against redundant work in action handlers.
     private func menuSelectionToggle(
         _ title: String,
         isSelected: Bool,
@@ -798,8 +851,7 @@ struct MenuBarControlCenterView: View {
     ) -> some View {
         Toggle(title, isOn: Binding(
             get: { isSelected },
-            set: { newValue in
-                guard newValue, !isSelected else { return }
+            set: { _ in
                 select()
             }
         ))
