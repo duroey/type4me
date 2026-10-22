@@ -624,7 +624,7 @@ struct FloatingBarView<S: FloatingBarState>: View {
             updateRecordingPeakWidthIfNeeded()
         }
         .onChange(of: state.transcriptionText) { _, text in
-            if !text.isEmpty && !usesCompactPresentation {
+            if !text.isEmpty && !usesCompactPresentation && !ASRRecognitionMode.isBatchRecordingPlaceholder(text) {
                 dismissModeHint()
             }
             updateRecordingPeakWidthIfNeeded()
@@ -1346,6 +1346,7 @@ struct FloatingBarView<S: FloatingBarState>: View {
             handleHintTask?.cancel()
             hoveredHandle = false
             hintedHandle = false
+            chrome?.resetHover()
         }
         switch phase {
         case .preparing:
