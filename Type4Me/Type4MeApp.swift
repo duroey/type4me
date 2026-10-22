@@ -301,13 +301,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                         }
                     case .ready:
                         break
+                    case .finishHint(let hint):
+                        appState.recordingFinishHint = hint
+                    case .useFinishingLabel:
+                        appState.usesFinishingLabel = true
+                    case .willInject:
+                        appState.markWillInject()
+                    case .enterProcessing:
+                        appState.showProcessing()
                     case .transcript(let transcript):
                         appState.setLiveTranscript(transcript)
                     case .completed:
                         self.selectionAskController?.recordingDidEnd(.finish)
-                        appState.stopRecording()
                         if await session.stoppedByMaxDuration {
-                            appState.processingLabelOverride = L("已达最大时长", "Max duration reached")
+                            appState.stopRecording(reason: .maxDuration)
+                        } else {
+                            appState.stopRecording()
                         }
                         self.hotkeyManager.isProcessing = false
                         self.safeResetHotkeyState()
@@ -625,7 +634,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// frozen its own context.
     var menuBarRuntimeSettingsAreEditable: Bool {
         switch appState.barPhase {
-        case .preparing, .recording:
+        case .preparing, .recording, .finishing:
             return false
         case .hidden, .processing, .recovering, .done, .error:
             return true
@@ -747,7 +756,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         switch appState.barPhase {
         case .hidden, .done, .error:
             break
-        case .preparing, .recording, .processing, .recovering:
+        case .preparing, .recording, .finishing, .processing, .recovering:
             DebugFileLogger.log("\(source.rawValue) record start blocked phase=\(appState.barPhase)")
             return
         }
@@ -928,7 +937,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         registerHotkeys(for: KeychainService.selectedASRProvider)
         appState.appendSegment(text, isConfirmed: true)
         floatingBarController?.setManualInputEditing(false)
-        appState.stopRecording()
+        appState.stopRecording(reason: .manualInput)
         hotkeyManager.resetActiveState()
         hotkeyManager.isProcessing = true
         Task { await session.submitManualInput(text, mode: mode) }
@@ -1284,6 +1293,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 MainActor.assumeIsolated {
                     if allowsSwitch {
                         self.appState.currentMode = processingMode
+                        self.appState.updateFinishHint(for: processingMode)
                     }
                     self.appState.stopRecording()
                 }
@@ -1416,7 +1426,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // question to process. Tear down the pending start deterministically.
             appState.cancel()
             Task { await self.session.cancelRecording() }
-        case .processing, .recovering, .done, .error, .hidden:
+        case .finishing, .processing, .recovering, .done, .error, .hidden:
             break
         }
     }

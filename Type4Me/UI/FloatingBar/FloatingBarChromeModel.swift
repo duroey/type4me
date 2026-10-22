@@ -1,6 +1,38 @@
 import Combine
 import Foundation
 
+
+/// What the floating bar looked like when its exit fade began.
+struct FloatingBarExitSnapshot: Equatable {
+    /// `FloatingBarController.panelGeneration` at capture time.
+    let generation: Int
+    let phase: FloatingBarPhase
+    let segments: [TranscriptionSegment]
+    let processingLabel: String
+    let feedbackMessage: String
+    let feedbackKind: FeedbackKind
+    let activityKind: RecordingActivityKind
+    let showsReviseUndo: Bool
+    let pinsTranscriptPopup: Bool
+
+    @MainActor
+    static func capture(from state: AppState, generation: Int) -> FloatingBarExitSnapshot {
+        let segments = (state.barPhase == .finishing && state.finishingSnapshotSegments != nil)
+            ? state.finishingSnapshotSegments!
+            : state.segments
+        return FloatingBarExitSnapshot(
+            generation: generation,
+            phase: state.barPhase,
+            segments: segments,
+            processingLabel: state.effectiveProcessingLabel,
+            feedbackMessage: state.feedbackMessage,
+            feedbackKind: state.feedbackKind,
+            activityKind: state.activityKind,
+            showsReviseUndo: state.latestReviseUndoTicketID != nil,
+            pinsTranscriptPopup: state.pinsTranscriptPopup
+        )
+    }
+}
 /// Coordinates UI chrome states (handle visibility, vertical anchor, drag status)
 /// between FloatingBarController and FloatingBarView.
 @MainActor
@@ -19,6 +51,11 @@ final class FloatingBarChromeModel: ObservableObject {
     @Published var snappedAxes: FloatingBarSnapAxes = []
     /// True only while a drag outlives its session.
     @Published var isRetainedForDrag = false
+    @Published private(set) var exitSnapshot: FloatingBarExitSnapshot?
+
+    func setExitSnapshot(_ snapshot: FloatingBarExitSnapshot?) {
+        exitSnapshot = snapshot
+    }
 
     private var hideTask: Task<Void, Never>?
 
