@@ -31,13 +31,13 @@ final class CodexCLIClientTests: XCTestCase {
         XCTAssertEqual(CodexCLILLMConfig.normalizeModel("custom-model"), "custom-model")
     }
 
-    func testRuntimeCandidatesPreferChatGPTBundledCodex() {
+    func testRuntimeCandidatesRetainStandaloneFallbacks() {
         let home = URL(fileURLWithPath: "/Users/tester")
         let candidates = CodexCLIRuntimeLocator.candidates(homeDirectory: home)
 
         XCTAssertEqual(
             candidates.first?.path,
-            "/Applications/ChatGPT.app/Contents/Resources/codex"
+            "/opt/homebrew/bin/codex"
         )
         XCTAssertEqual(candidates.last?.path, "/Users/tester/.local/bin/codex")
     }

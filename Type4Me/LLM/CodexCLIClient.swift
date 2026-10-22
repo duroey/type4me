@@ -148,28 +148,6 @@ actor CodexCLIClient: LLMClient {
     }
 }
 
-enum CodexCLIRuntimeLocator {
-    static func locate(
-        fileManager: FileManager = .default,
-        homeDirectory: URL = FileManager.default.homeDirectoryForCurrentUser
-    ) throws -> URL {
-        for candidate in candidates(homeDirectory: homeDirectory)
-        where fileManager.isExecutableFile(atPath: candidate.path) {
-            return candidate
-        }
-        throw CodexCLIError.notInstalled
-    }
-
-    static func candidates(homeDirectory: URL) -> [URL] {
-        [
-            URL(fileURLWithPath: "/Applications/ChatGPT.app/Contents/Resources/codex"),
-            URL(fileURLWithPath: "/opt/homebrew/bin/codex"),
-            URL(fileURLWithPath: "/usr/local/bin/codex"),
-            homeDirectory.appendingPathComponent(".local/bin/codex"),
-        ]
-    }
-}
-
 enum CodexCLIInvocation {
     static let outputSchemaData = Data(#"{"type":"object","properties":{"result":{"type":"string"}},"required":["result"],"additionalProperties":false}"#.utf8)
 
