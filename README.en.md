@@ -54,6 +54,9 @@ Examples and use cases for each mode: [Modes & Features](docs/usage/modes.en.md)
 
 - **Local and cloud recognition**: the Local edition runs SenseVoice + Qwen3-ASR on your Mac, completely free; in the cloud, choose from 18 services including Volcano Engine (Doubao), Soniox, OpenAI, Groq, Mistral AI, and Tencent Cloud. StepFun, Bailian, Gemini, ElevenLabs, Grok and Azure MAI offer a choice of real-time streaming or batch recognition, and custom HTTP batch endpoints are supported too.
 - **Any LLM**: Doubao, DeepSeek, Kimi, Zhipu, MiniMax, Xiaomi MiMo, OpenAI, Claude, Gemini and OpenRouter, plus Ollama, the local Magpie gateway and any OpenAI-compatible endpoint. You can also use your locally signed-in account through Codex CLI. Compatible endpoints can set reasoning effort.
+- **Magpie integration plugin**: install the community plugin "Type4Me" from the [Magpie](https://usemagpie.ai) plugin marketplace (or run `magpie plugin add @magpie-community/agent-type4me`) to add Type4Me to Magpie's Agents page. It lets you reuse subscriptions and API keys already configured in Magpie, with two-way real-time model syncing between both menu bars.
+  <br />
+  <img src="docs/screenshots/magpie-plugin.png" width="380" alt="Type4Me in the Magpie community plugin marketplace" />
 - **Voice Revise**: Spotted a mistake? Press `Fn` + `R` and say "make it 2 PM" — only that part changes, and you can undo by button or voice.
 - **Vocabulary**: hotwords improve recognition of names and jargon; snippets expand phrases like "my email" into the real address. With [type4me-vocab-skill](https://github.com/joewongjc/type4me-vocab-skill) installed, tell your AI agent "don't transcribe Qwen3.5 as Queen 3.5" and it maintains your vocabulary for you.
 - **Menu bar control center**: see recording status and switch mode, microphone, speech engine, LLM and translation target from the menu bar.

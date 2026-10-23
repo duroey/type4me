@@ -54,6 +54,9 @@ Type4Me 是一款免费开源的 macOS 语音输入法。按下快捷键说话�
 
 - **本地、云端语音识别**：下载本地版，可用 SenseVoice + Qwen3-ASR 识别，完全免费；云端支持火山引擎（豆包）、Soniox、OpenAI、Groq、Mistral AI、腾讯云等 18 家服务。阶跃星辰、百炼、Gemini、ElevenLabs、Grok 和 Azure MAI 可切换实时流式或批量识别，也可接入自定义 HTTP 批量接口。
 - **大模型随意换**：豆包、DeepSeek、Kimi、智谱、MiniMax、小米 MiMo、OpenAI、Claude、Gemini、OpenRouter，也可以接 Ollama、本机 Magpie 网关或任意 OpenAI 兼容接口，或通过 Codex CLI 使用本机已登录账号；兼容接口还可设置推理强度。
+- **Magpie 联动插件**：在 [Magpie](https://usemagpie.ai) 插件市场安装社区插件「Type4Me」（或运行 `magpie plugin add @magpie-community/agent-type4me`），可将 Type4Me 接入 Magpie 的 Agent 页。直接复用已配置的大模型订阅与 API Key，并在两边菜单栏双向实时同步模型。
+  <br />
+  <img src="docs/screenshots/magpie-plugin.png" width="380" alt="Magpie 社区插件市场中的 Type4Me" />
 - **语音改口**：刚输入的文字有错，按 `Fn` + `R` 说「改成下午 2 点」，只改那一处，可以一键或用语音撤销。
 - **词汇管理**：热词提高专有名词的识别率，片段替换可以把「我的邮箱」换成真实地址。装上 [type4me-vocab-skill](https://github.com/joewongjc/type4me-vocab-skill) 后，对 AI Agent 说一句「Qwen3.5 不要识别成 Queen 3.5」，它会帮你把词库维护好。
 - **菜单栏控制中心**：在菜单栏查看录音状态，切换模式、麦克风、识别引擎、文本处理模型和翻译目标语言。
